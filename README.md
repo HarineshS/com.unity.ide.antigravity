@@ -12,7 +12,7 @@ This project is a port of the [Cursor Unity Plugin](https://github.com/boxqkrtm/
 2. Go to **Window** -> **Package Manager**.
 3. Click the **+** button in the top left corner.
 4. Select **Add package from git URL...**.
-5. Enter the git URL of this repository (e.g., `https://github.com/YOUR_USERNAME/com.unity.ide.antigravity.git`).
+5. Enter the git URL of this repository (e.g., `https://github.com/HarineshS/com.unity.ide.antigravity.git`).
 6. Click **Add**.
 
 ## Features
