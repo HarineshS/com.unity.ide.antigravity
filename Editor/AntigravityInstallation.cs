@@ -1,4 +1,4 @@
-﻿/*---------------------------------------------------------------------------------------------
+/*---------------------------------------------------------------------------------------------
  *  Copyright (c) Google. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
@@ -75,7 +75,7 @@ namespace Google.Unity.Antigravity.Editor
 #elif UNITY_EDITOR_WIN
 			return File.Exists(path) && Regex.IsMatch(path, ".*antigravity.*.exe$", RegexOptions.IgnoreCase);
 #else
-			return File.Exists(path) && path.EndsWith("antigravity", StringComparison.OrdinalIgnoreCase);
+			return File.Exists(path) && (path.EndsWith("antigravity", StringComparison.OrdinalIgnoreCase) || path.EndsWith("antigravity-ide", StringComparison.OrdinalIgnoreCase));
 #endif
 		}
 
@@ -98,6 +98,7 @@ namespace Google.Unity.Antigravity.Editor
 
 			Version version = null;
 			var isPrerelease = false;
+			var displayName = "Antigravity";
 
 			try
 			{
@@ -125,6 +126,10 @@ namespace Google.Unity.Antigravity.Editor
 					var manifest = JsonUtility.FromJson<VisualStudioCodeManifest>(File.ReadAllText(manifestFullPath));
 					Version.TryParse(manifest.version.Split('-').First(), out version);
 					isPrerelease = manifest.version.ToLower().Contains("insider");
+					if (!string.IsNullOrEmpty(manifest.name))
+					{
+						displayName = manifest.name;
+					}
 				}
 			}
 			catch (Exception)
@@ -132,11 +137,16 @@ namespace Google.Unity.Antigravity.Editor
 				// do not fail if we are not able to retrieve the exact version number
 			}
 
+			if (displayName == "Antigravity" && editorPath.IndexOf("ide", StringComparison.OrdinalIgnoreCase) >= 0)
+			{
+				displayName = "Antigravity IDE";
+			}
+
 			isPrerelease = isPrerelease || editorPath.ToLower().Contains("insider");
 			installation = new AntigravityInstallation()
 			{
 				IsPrerelease = isPrerelease,
-				Name = "Antigravity" + (isPrerelease ? " - Insider" : string.Empty) + (version != null ? $" [{version.ToString(3)}]" : string.Empty),
+				Name = displayName + (isPrerelease ? " - Insider" : string.Empty) + (version != null ? $" [{version.ToString(3)}]" : string.Empty),
 				Path = editorPath,
 				Version = version ?? new Version()
 			};
@@ -153,6 +163,7 @@ namespace Google.Unity.Antigravity.Editor
 			var programFiles = IOPath.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ProgramFiles));
 
 			foreach (var basePath in new[] { localAppPath, programFiles }) {
+				candidates.Add(IOPath.Combine(basePath, "Antigravity IDE", "Antigravity IDE.exe"));
 				candidates.Add(IOPath.Combine(basePath, "antigravity", "antigravity.exe"));
 			}
 #elif UNITY_EDITOR_OSX
@@ -160,6 +171,9 @@ namespace Google.Unity.Antigravity.Editor
 			candidates.AddRange(Directory.EnumerateDirectories(appPath, "Antigravity*.app"));
 #elif UNITY_EDITOR_LINUX
 			// Well known locations
+			candidates.Add("/usr/bin/antigravity-ide");
+			candidates.Add("/bin/antigravity-ide");
+			candidates.Add("/usr/local/bin/antigravity-ide");
 			candidates.Add("/usr/bin/antigravity");
 			candidates.Add("/bin/antigravity");
 			candidates.Add("/usr/local/bin/antigravity");
@@ -187,27 +201,29 @@ namespace Google.Unity.Antigravity.Editor
 			var dirs = envdirs.Split(':');
 			foreach(var dir in dirs)
 			{
-				Match match = null;
-
-				try
+				foreach (var desktopName in new[] { "antigravity-ide.desktop", "antigravity.desktop" })
 				{
-					var desktopFile = IOPath.Combine(dir, "applications/code.desktop");
-					if (!File.Exists(desktopFile))
-						continue;
+					Match match = null;
 
-					var content = File.ReadAllText(desktopFile);
-					match = DesktopFileExecEntry.Match(content);
+					try
+					{
+						var desktopFile = IOPath.Combine(dir, "applications", desktopName);
+						if (!File.Exists(desktopFile))
+							continue;
+
+						var content = File.ReadAllText(desktopFile);
+						match = DesktopFileExecEntry.Match(content);
+					}
+					catch
+					{
+						// do not fail if we cannot read desktop file
+					}
+
+					if (match != null && match.Success)
+					{
+						yield return match.Groups[1].Value;
+					}
 				}
-				catch
-				{
-					// do not fail if we cannot read desktop file
-				}
-
-				if (match == null || !match.Success)
-					continue;
-
-				yield return match.Groups[1].Value;
-				break;
 			}
 		}
 
@@ -518,12 +534,17 @@ namespace Google.Unity.Antigravity.Editor
 
 			// Get process name list based on different operating systems
 #if UNITY_EDITOR_OSX
+			processes.AddRange(Process.GetProcessesByName("Antigravity IDE"));
+			processes.AddRange(Process.GetProcessesByName("Antigravity IDE Helper"));
 			processes.AddRange(Process.GetProcessesByName("Antigravity"));
 			processes.AddRange(Process.GetProcessesByName("Antigravity Helper"));
 #elif UNITY_EDITOR_LINUX
+			processes.AddRange(Process.GetProcessesByName("antigravity-ide"));
+			processes.AddRange(Process.GetProcessesByName("Antigravity IDE"));
 			processes.AddRange(Process.GetProcessesByName("antigravity"));
 			processes.AddRange(Process.GetProcessesByName("Antigravity"));
 #else
+			processes.AddRange(Process.GetProcessesByName("Antigravity IDE"));
 			processes.AddRange(Process.GetProcessesByName("antigravity"));
 #endif
 

@@ -1,4 +1,4 @@
-﻿/*---------------------------------------------------------------------------------------------
+/*---------------------------------------------------------------------------------------------
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
@@ -125,19 +125,26 @@ namespace Google.Unity.Antigravity.Editor
 			{
 				var workspaces = new List<string>();
 				var userProfile = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-				string cursorStoragePath;
+				var storageDirs = new List<string>();
 
 #if UNITY_EDITOR_OSX
-				cursorStoragePath = Path.Combine(userProfile, "Library", "Application Support", "cursor", "User", "workspaceStorage");
+				storageDirs.Add(Path.Combine(userProfile, "Library", "Application Support", "Antigravity IDE", "User", "workspaceStorage"));
+				storageDirs.Add(Path.Combine(userProfile, "Library", "Application Support", "Antigravity", "User", "workspaceStorage"));
 #elif UNITY_EDITOR_LINUX
-				cursorStoragePath = Path.Combine(userProfile, ".config", "Cursor", "User", "workspaceStorage");
+				storageDirs.Add(Path.Combine(userProfile, ".config", "Antigravity IDE", "User", "workspaceStorage"));
+				storageDirs.Add(Path.Combine(userProfile, ".config", "Antigravity", "User", "workspaceStorage"));
+				storageDirs.Add(Path.Combine(userProfile, ".config", "antigravity", "User", "workspaceStorage"));
 #else
-				cursorStoragePath = Path.Combine(userProfile, "AppData", "Roaming", "cursor", "User", "workspaceStorage");
+				storageDirs.Add(Path.Combine(userProfile, "AppData", "Roaming", "Antigravity IDE", "User", "workspaceStorage"));
+				storageDirs.Add(Path.Combine(userProfile, "AppData", "Roaming", "Antigravity", "User", "workspaceStorage"));
 #endif
-				
-				if (Directory.Exists(cursorStoragePath))
+
+				foreach (var storagePath in storageDirs)
 				{
-					foreach (var workspaceDir in Directory.GetDirectories(cursorStoragePath))
+					if (!Directory.Exists(storagePath))
+						continue;
+
+					foreach (var workspaceDir in Directory.GetDirectories(storagePath))
 					{
 						try
 						{
@@ -189,21 +196,17 @@ namespace Google.Unity.Antigravity.Editor
 						}
 						catch (Exception ex)
 						{
-							Debug.LogWarning($"[Cursor] Error reading workspace state file: {ex.Message}");
+							Debug.LogWarning($"[Antigravity] Error reading workspace state file: {ex.Message}");
 							continue;
 						}
 					}
-				}
-				else
-				{
-					Debug.LogWarning($"[Cursor] Workspace storage directory not found: {cursorStoragePath}");
 				}
 
 				return workspaces.Distinct().ToArray();
 			}
 			catch (Exception ex)
 			{
-				Debug.LogError($"[Cursor] Error getting workspace directory: {ex.Message}");
+				Debug.LogError($"[Antigravity] Error getting workspace directory: {ex.Message}");
 				return null;
 			}
 		}
